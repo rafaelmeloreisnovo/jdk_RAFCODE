@@ -109,8 +109,8 @@ static inline unsigned int raf_ll_probe_v1(
                    10u * ((unsigned int)p[5] - (unsigned int)'0') +
                    ((unsigned int)p[6] - (unsigned int)'0');
         r->format_version = version;
-        /* v041 and later have different container semantics: fail closed. */
-        if (version < 35u || version > 40u) {
+        /* DEX 036 is not documented for this legacy model; 041+ has container semantics: fail closed. */
+        if (version < 35u || version == 36u || version > 40u) {
             r->status = RAF_LL_UNSUPPORTED;
             return r->status;
         }

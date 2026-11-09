@@ -37,6 +37,12 @@ jobs:
               rafcode/lowlevel/tests/test_raf_ll_regression_v2.c \
               -o /tmp/raf-ll-ci/regressions
           /tmp/raf-ll-ci/regressions
+          gcc -std=c11 -O1 -g -Wall -Wextra -Werror -pedantic \
+              -fsanitize=undefined -fno-omit-frame-pointer \
+              -Irafcode/lowlevel \
+              rafcode/lowlevel/tests/test_raf_ll_layout_v1.c \
+              -o /tmp/raf-ll-ci/layout
+          /tmp/raf-ll-ci/layout
       - name: Freestanding object contract (no undefined symbols)
         shell: bash
         run: |
@@ -60,6 +66,16 @@ jobs:
               -o /tmp/raf-ll-ci/arm64.o
           test -z "$(nm -u /tmp/raf-ll-ci/armv7.o)"
           test -z "$(nm -u /tmp/raf-ll-ci/arm64.o)"
+          clang --target=armv7a-none-eabi -std=c11 -O2 -Wall -Wextra -Werror -pedantic \
+              -ffreestanding -fno-builtin -fno-stack-protector -nostdinc \
+              -Irafcode/lowlevel -c rafcode/lowlevel/tests/test_raf_ll_layout_v1.c \
+              -o /tmp/raf-ll-ci/layout-armv7.o
+          clang --target=aarch64-none-elf -std=c11 -O2 -Wall -Wextra -Werror -pedantic \
+              -ffreestanding -fno-builtin -fno-stack-protector -nostdinc \
+              -Irafcode/lowlevel -c rafcode/lowlevel/tests/test_raf_ll_layout_v1.c \
+              -o /tmp/raf-ll-ci/layout-arm64.o
+          test -z "$(nm -u /tmp/raf-ll-ci/layout-armv7.o)"
+          test -z "$(nm -u /tmp/raf-ll-ci/layout-arm64.o)"
           readelf -h /tmp/raf-ll-ci/armv7.o | grep -q 'Machine:.*ARM'
           readelf -h /tmp/raf-ll-ci/arm64.o | grep -q 'Machine:.*AArch64'
       - name: Explicit non-claims

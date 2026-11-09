@@ -1,0 +1,68 @@
+name: RAFCODE scoped low-level ELF DEX
+on:
+  pull_request:
+    paths:
+      - 'rafcode/lowlevel/**'
+      - 'NOVOexport/001_PONTEIRO/JDK_RAFCODE_LOWLEVEL_V2_CURRENT.md'
+      - '.github/workflows/raf-lowlevel-scoped.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: raf-ll-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  bounded-probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2 pinned
+      - name: Hosted sanitizer and adversarial tests (not a JDK build)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/raf-ll-ci
+          gcc -std=c11 -O1 -g -Wall -Wextra -Werror -pedantic \
+              -fsanitize=address,undefined -fno-omit-frame-pointer \
+              -Irafcode/lowlevel \
+              rafcode/lowlevel/tests/test_raf_ll_probe_v1.c \
+              -o /tmp/raf-ll-ci/kats
+          /tmp/raf-ll-ci/kats
+          gcc -std=c11 -O1 -g -Wall -Wextra -Werror -pedantic \
+              -fsanitize=address,undefined -fno-omit-frame-pointer \
+              -Irafcode/lowlevel \
+              rafcode/lowlevel/tests/test_raf_ll_regression_v2.c \
+              -o /tmp/raf-ll-ci/regressions
+          /tmp/raf-ll-ci/regressions
+      - name: Freestanding object contract (no undefined symbols)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/raf-ll-ci
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -pedantic \
+              -ffreestanding -fno-builtin -fno-stack-protector -nostdinc \
+              -Irafcode/lowlevel -c rafcode/lowlevel/tests/probe_object_v1.c \
+              -o /tmp/raf-ll-ci/host.o
+          test -z "$(nm -u /tmp/raf-ll-ci/host.o)"
+          readelf -h /tmp/raf-ll-ci/host.o
+          clang --target=armv7a-none-eabi -std=c11 -O2 \
+              -Wall -Wextra -Werror -pedantic -ffreestanding \
+              -fno-builtin -fno-stack-protector -nostdinc \
+              -Irafcode/lowlevel -c rafcode/lowlevel/tests/probe_object_v1.c \
+              -o /tmp/raf-ll-ci/armv7.o
+          clang --target=aarch64-none-elf -std=c11 -O2 \
+              -Wall -Wextra -Werror -pedantic -ffreestanding \
+              -fno-builtin -fno-stack-protector -nostdinc \
+              -Irafcode/lowlevel -c rafcode/lowlevel/tests/probe_object_v1.c \
+              -o /tmp/raf-ll-ci/arm64.o
+          test -z "$(nm -u /tmp/raf-ll-ci/armv7.o)"
+          test -z "$(nm -u /tmp/raf-ll-ci/arm64.o)"
+          readelf -h /tmp/raf-ll-ci/armv7.o | grep -q 'Machine:.*ARM'
+          readelf -h /tmp/raf-ll-ci/arm64.o | grep -q 'Machine:.*AArch64'
+      - name: Explicit non-claims
+        run: |
+          echo 'PASS_SCOPED on runner only; no full JDK/ART/JNI/DEX execution/hardware proof.'
+          echo 'No artifact upload; no weakening existing OpenJDK workflows.'

@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'rafcode/lowlevel/**'
+      - 'NOVOexport/001_PONTEIRO/JDK_RAFCODE_LOWLEVEL_V2_CURRENT.md'
       - '.github/workflows/raf-lowlevel-scoped.yml'
   workflow_dispatch:
 

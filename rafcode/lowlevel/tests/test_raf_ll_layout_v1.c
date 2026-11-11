@@ -8,6 +8,9 @@ static void put32(unsigned char *p, unsigned int v) {
     p[0]=(unsigned char)v; p[1]=(unsigned char)(v>>8);
     p[2]=(unsigned char)(v>>16); p[3]=(unsigned char)(v>>24);
 }
+static void put64(unsigned char *p, unsigned long long v) {
+    unsigned int i; for (i=0u;i<8u;++i) p[i]=(unsigned char)(v>>(8u*i));
+}
 static void fill(unsigned char *p, unsigned int n) {
     unsigned int i; for (i=0u;i<n;++i)p[i]=0u;
 }
@@ -55,5 +58,21 @@ int main(void) {
     CHECK(raf_ll_layout_v1(p,256ul)==RAF_LL_MALFORMED);
     for(i=0ul;i<112ul;++i) CHECK(raf_ll_layout_v1(p,i)!=RAF_LL_HEADER_PLAUSIBLE);
     CHECK(raf_ll_layout_v1((const unsigned char*)0,0ul)==RAF_LL_INVALID_INPUT);
+    /* ELF64 AArch64: keep a valid PT_LOAD, then falsify each span invariant. */
+    fill(p,256u);
+    p[0]=0x7fu;p[1]='E';p[2]='L';p[3]='F';p[4]=2u;p[5]=1u;p[6]=1u;
+    put16(p+18,183u);put32(p+20,1u);put16(p+52,64u);
+    put64(p+32,64ull);put16(p+54,56u);put16(p+56,1u);
+    put32(p+64,1u);put64(p+72,128ull);
+    put64(p+96,16ull);put64(p+104,32ull);
+    CHECK(raf_ll_layout_v1(p,256ul)==RAF_LL_HEADER_PLAUSIBLE);
+    put64(p+96,256ull);
+    CHECK(raf_ll_layout_v1(p,256ul)==RAF_LL_MALFORMED);
+    put64(p+96,16ull);put64(p+104,15ull);
+    CHECK(raf_ll_layout_v1(p,256ul)==RAF_LL_MALFORMED);
+    put64(p+104,32ull);put16(p+56,0u);
+    CHECK(raf_ll_layout_v1(p,256ul)==RAF_LL_MALFORMED);
+    put64(p+32,0ull);
+    CHECK(raf_ll_layout_v1(p,256ul)==RAF_LL_HEADER_PLAUSIBLE);
     return 0;
 }
